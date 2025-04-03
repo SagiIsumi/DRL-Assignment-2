@@ -268,7 +268,7 @@ def get_action(state, score):
     # You can submit this random agent to evaluate the performance of a purely random strategy.
     file_id = "1MWt7BP5-4dXnjDu5iq9edZGLAQr1i-BO"
     url=f"https://drive.google.com/uc?id={file_id}"
-    gdown.download("https://drive.google.com/uc?id=1MWt7BP5-4dXnjDu5iq9edZGLAQr1i-BO" , "stage_1.pkl",quiet=False, fuzzy=True)
+    gdown.download("https://drive.google.com/file/d/1MWt7BP5-4dXnjDu5iq9edZGLAQr1i-BO/view?usp=sharing" , "stage_1.pkl",quiet=False, fuzzy=True)
     patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
     approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
     with open('stage_1.pkl', 'rb') as f:
@@ -288,7 +288,7 @@ def get_action(state, score):
     best_act, _ = td_mcts.best_action_distribution(env,root)
     return best_act
 
-# if __name__=="__main__":
-#     env = Game2048Env()
-#     state=env.reset()
-#     print(get_action(state,env.score))
+if __name__=="__main__":
+    env = Game2048Env()
+    state=env.reset()
+    print(get_action(state,env.score))
