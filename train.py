@@ -5,8 +5,9 @@ import numpy as np
 from collections import defaultdict
 import pickle
 import matplotlib.pyplot as plt
-from student_agent import Game2048Env
 import time
+
+
 # -------------------------------
 # TODO: Define transformation functions (rotation and reflection), i.e., rot90, rot180, ..., etc.
 def rot90(pattern, board_size):
@@ -242,28 +243,29 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             return final_scores,stage_next_board
     return final_scores,stage_next_board
 
+if __name__=="__main__":
+    from student_agent import Game2048Env
+    # TODO: Define your own n-tuple patterns
+    patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
+    #patterns = [[(0,0),(0,1),(0,2),(1,0),(1,1),(1,2)],[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1)],[(0,0),(1,0),(2,0),(3,0),(0,1),(1,1)],[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)]]
+    # patterns = [[(0,0),(0,1),(1,0),(1,1)],[(0,0),(0,1),(0,2),(1,0)]]
+    approximator_stage1 = NTupleApproximator(board_size=4, patterns=patterns)
+    approximator_stage2 =  NTupleApproximator(board_size=4, patterns=patterns)
+    env = Game2048Env()
 
-# TODO: Define your own n-tuple patterns
-patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
-#patterns = [[(0,0),(0,1),(0,2),(1,0),(1,1),(1,2)],[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1)],[(0,0),(1,0),(2,0),(3,0),(0,1),(1,1)],[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)]]
-# patterns = [[(0,0),(0,1),(1,0),(1,1)],[(0,0),(0,1),(0,2),(1,0)]]
-approximator_stage1 = NTupleApproximator(board_size=4, patterns=patterns)
-approximator_stage2 =  NTupleApproximator(board_size=4, patterns=patterns)
-env = Game2048Env()
+    # Run TD-Learning training
+    # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
+    # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
+    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=20000, 
+                                                alpha=0.1, gamma=0.98,stage="stage1")
+    plot_mean_scores(final_scores=final_scores,stage=1)
+    with open('stage_1.pkl', 'wb') as f:
+        pickle.dump(approximator_stage1.weights, f)
+    print(stage_next_board)
 
-# Run TD-Learning training
-# Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
-# However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
-final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=20000, 
-                                            alpha=0.1, gamma=0.98,stage="stage1")
-plot_mean_scores(final_scores=final_scores,stage=1)
-with open('stage_1.pkl', 'wb') as f:
-    pickle.dump(approximator_stage1.weights, f)
-print(stage_next_board)
-
-final_scores ,stage_next_board = td_learning(env, approximator_stage2, num_episodes=20000, 
-                           alpha=0.1, gamma=0.99,stage="stage2",stage_record=stage_next_board)
-plot_mean_scores(final_scores=final_scores,stage=2)
-with open('stage_2.pkl', 'wb') as f:
-    pickle.dump(approximator_stage2.weights, f)
-print(stage_next_board)
+    final_scores ,stage_next_board = td_learning(env, approximator_stage2, num_episodes=20000, 
+                            alpha=0.1, gamma=0.99,stage="stage2",stage_record=stage_next_board)
+    plot_mean_scores(final_scores=final_scores,stage=2)
+    with open('stage_2.pkl', 'wb') as f:
+        pickle.dump(approximator_stage2.weights, f)
+    print(stage_next_board)
