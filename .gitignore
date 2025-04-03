@@ -4,6 +4,6 @@ __pycache__/
 *.pyo
 .venv/
 .env
-
+*.pkl
 # ignore eval.py
 eval.py

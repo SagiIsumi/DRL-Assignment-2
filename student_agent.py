@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 import copy
 import random
 import math
-
+from train import NTupleApproximator
+import gdown
+import os
+from TD_MCTS import TD_MCTS,TD_MCTS_Node
 
 class Game2048Env(gym.Env):
     def __init__(self):
@@ -155,7 +158,29 @@ class Game2048Env(gym.Env):
         done = self.is_game_over()
 
         return self.board, self.score, done, {}
-
+    def evaluate(self, action):
+        origin_score=self.score
+        origin_board=self.board.copy()
+        #print(f"board:{self.board},score{self.score}")
+        assert self.action_space.contains(action), "Invalid action"
+        if action == 0:
+              moved = self.move_up()
+        elif action == 1:
+              moved = self.move_down()
+        elif action == 2:
+              moved = self.move_left()
+        elif action == 3:
+              moved = self.move_right()
+        else:
+              moved = False
+        # if moved:
+        #     self.add_random_tile()
+        next_state=self.board.copy()
+        next_score=self.score
+        self.score=origin_score
+        self.board=origin_board.copy()
+        #print(f"board:{self.board},score{self.score}")
+        return next_state, next_score
     def render(self, mode="human", action=None):
         """
         Render the current board using Matplotlib.
@@ -233,8 +258,28 @@ class Game2048Env(gym.Env):
 
 def get_action(state, score):
     env = Game2048Env()
-    return random.choice([0, 1, 2, 3]) # Choose a random action
+    env.board=state
+    env.score=score
+    #return random.choice([0, 1, 2, 3]) # Choose a random action
     
     # You can submit this random agent to evaluate the performance of a purely random strategy.
+    file_id = "1NgVor7szhiXwZf0z1lDXgilC0_O3RCES"
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", "output_filename.ext", quiet=False)
+    patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
+    approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
+    with open('stage_1.pkl', 'rb') as f:
+        if os.path.getsize("stage_1.pkl") > 0:
+            approximator_1.weights = pickle.load(f)
+        else:
+            print("No File!!")
+    td_mcts = TD_MCTS(env, approximator_1, iterations=40, exploration_constant=1.41, rollout_depth=10, gamma=0.99)
+    root = TD_MCTS_Node(state, env.score)
 
+    # Run multiple simulations to build the MCTS tree
+    for _ in range(td_mcts.iterations):
+        td_mcts.run_simulation(root)
+
+    # Select the best action (based on highest visit count)
+    best_act, _ = td_mcts.best_action_distribution(env,root)
+    return best_act
 
