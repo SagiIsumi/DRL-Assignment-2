@@ -264,7 +264,7 @@ def get_action(state, score):
     
     # You can submit this random agent to evaluate the performance of a purely random strategy.
     file_id = "1NgVor7szhiXwZf0z1lDXgilC0_O3RCES"
-    gdown.download(f"https://drive.google.com/uc?id={file_id}", "output_filename.ext", quiet=False)
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", "stage_1.pkl", quiet=False)
     patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
     approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
     with open('stage_1.pkl', 'rb') as f:
@@ -272,6 +272,7 @@ def get_action(state, score):
             approximator_1.weights = pickle.load(f)
         else:
             print("No File!!")
+    print(approximator_1.weights[0])
     td_mcts = TD_MCTS(env, approximator_1, iterations=40, exploration_constant=1.41, rollout_depth=10, gamma=0.99)
     root = TD_MCTS_Node(state, env.score)
 
@@ -283,3 +284,7 @@ def get_action(state, score):
     best_act, _ = td_mcts.best_action_distribution(env,root)
     return best_act
 
+if __name__=="__main__":
+    env = Game2048Env()
+    state=env.reset()
+    print(get_action(state,env.score))
