@@ -248,7 +248,7 @@ if __name__=="__main__":
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
     final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=20000, 
-                                                alpha=0.25, gamma=0.98,stage="stage1")
+                                                alpha=0.08, gamma=0.98,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)
