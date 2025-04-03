@@ -258,6 +258,8 @@ class Game2048Env(gym.Env):
 
         # If the simulated board is different from the current board, the move is legal
         return not np.array_equal(self.board, temp_board)
+    
+env = Game2048Env()
 file_id = "1MWt7BP5-4dXnjDu5iq9edZGLAQr1i-BO"
 url=f"https://drive.google.com/uc?id={file_id}"
 gdown.download(url , "stage_1.pkl",quiet=False, fuzzy=True)
@@ -271,7 +273,6 @@ with open('stage_1.pkl', 'rb') as f:
 
 td_mcts = TD_MCTS(env, approximator_1, iterations=40, exploration_constant=1.41, rollout_depth=10, gamma=0.99)
 def get_action(state, score):
-    env = Game2048Env()
     env.board=state
     env.score=score
     #return random.choice([0, 1, 2, 3]) # Choose a random action
