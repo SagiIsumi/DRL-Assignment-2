@@ -159,8 +159,6 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
         stopper=0
         while not done:
             legal_moves = [a for a in range(4) if env.is_move_legal(a)]
-            # if stopper<1:
-            #     print(f"legal moves:{legal_moves},state:{state},board:{env.board}")
             if not legal_moves:
                 break
             # TODO: action selection
@@ -181,23 +179,14 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
                         expected_reward=total_reward
                         best_action=action
               action=best_action
-            # if episode>100:
-            #   print(f"action:{action},rewards:{rewards}")
-
             # Note: TD learning works fine on 2048 without explicit exploration, but you can still try some exploration methods.
             next_state, new_score =env.evaluate(action)
-            # if stopper<1:
-            #     print(f"legal moves:{legal_moves},state:{state},board:{env.board},next state:{next_state},action:{action}")
-            #     time.sleep(3)
-            #     stopper+=1
             incremental_reward = new_score - previous_score
             trajectory.append((state.copy(), action, incremental_reward, next_state.copy()))
             _, _, done, _ = env.step(action)
             if env.score>score_threshold:
                 print(f"episode:{episode},score:{env.score}")
                 score_threshold+=4000
-            # if episode>100:
-            #   env.render(action=action)
           
             # TODO: Store trajectory or just update depending on the implementation
             previous_score = new_score
@@ -221,12 +210,14 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             next_value = approximator.value(next_state)
             td_error = incremental_reward + gamma * next_value - value
             # if episode>150:
-            print(f"state:{state}, action:{action}, \n next_state:{next_state}")
-            print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
-            print(f"td_error:{td_error}")
-            time.sleep(0.1)
+            # print(f"state:{state}, action:{action}, \n next_state:{next_state}")
+            # print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
+            # print(f"td_error:{td_error}")
+            # time.sleep(0.1)
             approximator.update(state, td_error, alpha)
-
+        # print(f"weights1:{approximator.weights[0][(0,0,0,0,0,0)]}\nweights2:{approximator.weights[1][(0,0,0,0,0,0)]}")
+        # print(f"weights1:{approximator.weights[0][(1,1,0,0,0,0)]}\nweights2:{approximator.weights[1][(1,1,0,0,0,0)]}")
+        # time.sleep(2)
 
         final_scores.append(env.score)
         success_flags.append(1 if max_tile >= 2048 else 0)
@@ -257,7 +248,7 @@ if __name__=="__main__":
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
     final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=20000, 
-                                                alpha=0.1, gamma=0.98,stage="stage1")
+                                                alpha=0.25, gamma=0.98,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)
