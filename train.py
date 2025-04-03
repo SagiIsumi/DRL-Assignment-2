@@ -61,7 +61,7 @@ class NTupleApproximator:
         self.board_size = board_size
         self.patterns = patterns
         # Create a weight dictionary for each pattern (shared within a pattern group)
-        self.weights = [defaultdict(default_value) for _ in patterns]
+        self.weights = [defaultdict(float) for _ in patterns]
         # Generate symmetrical transformations for each pattern
         self.symmetry_patterns = []
         for pattern in self.patterns:

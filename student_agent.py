@@ -12,6 +12,9 @@ from train import NTupleApproximator
 import gdown
 import os
 from TD_MCTS import TD_MCTS,TD_MCTS_Node
+import sys
+
+sys.modules['__main__'].NTupleApproximator = NTupleApproximator
 
 class Game2048Env(gym.Env):
     def __init__(self):
@@ -272,7 +275,7 @@ def get_action(state, score):
             approximator_1.weights = pickle.load(f)
         else:
             print("No File!!")
-    print(approximator_1.weights[0])
+    #print(approximator_1.weights[0])
     td_mcts = TD_MCTS(env, approximator_1, iterations=40, exploration_constant=1.41, rollout_depth=10, gamma=0.99)
     root = TD_MCTS_Node(state, env.score)
 
@@ -284,7 +287,7 @@ def get_action(state, score):
     best_act, _ = td_mcts.best_action_distribution(env,root)
     return best_act
 
-if __name__=="__main__":
-    env = Game2048Env()
-    state=env.reset()
-    print(get_action(state,env.score))
+# if __name__=="__main__":
+#     env = Game2048Env()
+#     state=env.reset()
+#     print(get_action(state,env.score))
