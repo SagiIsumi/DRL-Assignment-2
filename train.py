@@ -126,7 +126,7 @@ def create_env_from_state(env):
     """
     new_env = copy.deepcopy(env)
     return new_env
-def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,stage:str="",stage_record:list[tuple]=[]):
+def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,stage:str="",stage_record=[]):
     """
     Trains the 2048 agent using TD-Learning.
 
