@@ -58,7 +58,7 @@ class NTupleApproximator:
         """
         
         def default_value():
-            return 1.25
+            return 500
         self.board_size = board_size
         self.patterns = patterns
         # Create a weight dictionary for each pattern (shared within a pattern group)
@@ -167,7 +167,7 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             if rand_num < epsilon:
                 action = random.choice(legal_moves)
             else:
-                expected_reward=-10000
+                expected_reward=-100000
                 for action in range(4):
                     if action in legal_moves:
                         _,sim_state,sim_score=eval(env.board,env.score,action)
@@ -249,7 +249,7 @@ if __name__=="__main__":
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
     final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
-                                                alpha=0.22, gamma=0.99,stage="stage1")
+                                                alpha=0.2, gamma=0.995,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)

@@ -28,6 +28,8 @@ jobs:
         pip install gym
         pip install -r requirements.txt
         pip install gdown
+        pip install numba
+      
 
     - name: 3. Ensure env.so is executable
       run: chmod +x env.cpython-38-x86_64-linux-gnu.so
