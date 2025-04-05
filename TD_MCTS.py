@@ -2,6 +2,7 @@ import copy
 import random
 import math
 import numpy as np
+from evaluate import eval
 
 # Note: This MCTS implementation is almost identical to the previous one,
 # except for the rollout phase, which now incorporates the approximator.
@@ -89,7 +90,9 @@ class TD_MCTS:
           action = random.choice([a for a in range(4) if sim_env.is_move_legal(a)])
         else:
            for i in range(4):
-              sim_state, sim_score=sim_env.evaluate(i)
+              moved,sim_state,sim_score=eval(sim_env.board,sim_env.score,i)
+              if not moved:
+                 continue
               total_reward=sim_score+self.gamma*self.approximator.value(sim_state)
               if total_reward>best_reward:
                   if i in legal_moves:
