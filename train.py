@@ -199,10 +199,8 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
                     stage_next_board.append((state,new_score))
                     stage_next_board_trigger=False
         #epsilon=epsilon*0.995
-        if alpha>0.15:
-            alpha=max(alpha*0.999995,0.15)
-        else:
-            alpha=max(alpha*0.99999,0.1)
+        # if episode>8000:
+        #     alpha=max(alpha*0.999995,0.15)
         # TODO: If you are storing the trajectory, consider updating it now depending on your implementation.
         for state, action, incremental_reward, next_state in reversed(trajectory):
             #print(f"state:{state}, action:{action}, incremental_reward:{incremental_reward}, next_state:{next_state}")
@@ -248,8 +246,8 @@ if __name__=="__main__":
     # Run TD-Learning training
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
-    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
-                                                alpha=0.2, gamma=0.995,stage="stage1")
+    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=12000, 
+                                                alpha=0.16, gamma=0.99,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)

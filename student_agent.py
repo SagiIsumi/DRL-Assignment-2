@@ -237,6 +237,20 @@ class Game2048Env(gym.Env):
         # If the simulated board is different from the current board, the move is legal
         return not np.array_equal(self.board, temp_board)
     
+env = Game2048Env()
+state=env.reset()
+file_id = "1iakEBnZs9NVSTM-S6HPGaAsTRdVrKkl7"
+url=f"https://drive.google.com/uc?id={file_id}"
+gdown.download(url , "stage_1.pkl",quiet=False, fuzzy=True)
+patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
+approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
+with open('stage_1.pkl', 'rb') as f:
+    if os.path.getsize("stage_1.pkl") > 0:
+        approximator_1.weights = pickle.load(f)
+    else:
+        print("No File!!")
+
+td_mcts = TD_MCTS(env, approximator_1, iterations=40, exploration_constant=1.41, rollout_depth=20, gamma=0.99)
 
 def get_action(state, score):
     env.board=state
