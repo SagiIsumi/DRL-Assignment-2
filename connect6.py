@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 import random
+from train_c6 import TD_learn
+
 
 class Connect6Game:
     def __init__(self, size=19):
@@ -23,6 +25,96 @@ class Connect6Game:
         self.turn = 1
         self.game_over = False
         print("= ", flush=True)
+    def get_rel_zone(self):
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        relevance_zone=set()
+        radius=3
+        for r in range(self.size):
+            for c in range(self.size):
+                if self.board[r, c] != 0:
+                    for dr, dc in directions:
+                        for rad in range(-radius,radius+1):
+                            nr=r+rad*dr
+                            nc=c+rad*dc
+                            if 0 <= nr < self.size and 0 <= nc < self.size and self.board[nr][nc] == 0:
+                                relevance_zone.add((nr, nc))
+        return relevance_zone
+    def check_line(self, x, y,color):
+        line = []
+        features=[0,0,0,0,0,0,0]
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        for dx, dy in directions:
+            dir_feature=[]
+            for i in range(-4, 4):  # 向前和向後檢查最多5個位置
+                nx, ny = x + i * dx, y + i * dy
+                if 0 <= nx < self.size and 0 <= ny < self.size:
+                    dir_feature.append(self.board[nx][ny])
+                else:
+                    dir_feature.append('2')  # 超出邊界
+            line.append(dir_feature)
+
+
+        # 定義各種棋形的模式
+
+        threat1_patterns = ['2011110','101110','110110','111010','2111100',
+                          '011101','101101','110101','111001','111001',
+                          '2111110','2101111','2110111','2111011','2111101']
+        threat2_patterns=['00111100','0111110','10111100','10111101']
+        live3_patterns = ['011100','010110']
+        dead3_patterns = ['2111000', '2110100','2101100','2100110']
+        live2_patterns = ['001100', '010100',]
+        dead2_patterns = ['2110000', '2011000', '2001100', '2000110']
+        live1_patterns = ['0100000', '0010000', '0001000'] 
+        for dir in line:       
+        # 將檢測到的線轉換為字符串，方便匹配模式
+            if color=='B':
+                line_str = ''.join(['1' if cell == 1 else '0' if cell == 0 else '2' for cell in dir])
+            else:
+                line_str = ''.join(['1' if cell == 2 else '0' if cell == 0 else '1' for cell in dir])
+
+            if any(pattern in line_str for pattern in threat1_patterns):
+                features[0]+=1
+            if any(pattern[::-1] in line_str for pattern in threat1_patterns):
+                features[0]+=1
+            if any(pattern in line_str for pattern in threat2_patterns):
+                features[1]+=1
+            if any(pattern[::-1] in line_str for pattern in threat2_patterns):
+                features[1]+=1
+            if any(pattern in line_str for pattern in live3_patterns):
+                features[2]+=1
+            if any(pattern[::-1] in line_str for pattern in live3_patterns):
+                features[2]+=1
+            if any(pattern in line_str for pattern in dead3_patterns):
+                features[3]+=1
+            if any(pattern[::-1] in line_str for pattern in dead3_patterns):
+                features[3]+=1
+            if any(pattern in line_str for pattern in live2_patterns):
+                features[4]+=1
+            if any(pattern[::-1] in line_str for pattern in live2_patterns):
+                features[4]+=1            
+            if any(pattern in line_str for pattern in dead2_patterns):
+                features[5]+=1
+            if any(pattern[::-1] in line_str for pattern in dead2_patterns):
+                features[5]+=1
+            if any(pattern in line_str for pattern in live1_patterns):
+                features[6]+=1
+            if any(pattern[::-1] in line_str for pattern in live1_patterns):
+                features[6]+=1
+        return features
+    def get_feature(self):
+        features=[0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0]
+        for r in range(self.size):
+            for c in range(self.size):
+                if self.board[r, c] == 1:
+                    feature=self.check_line(r,c,color='B')
+                    for index,count in enumerate(feature):
+                        features[index]+=count
+                elif self.board[r, c] == 2:
+                    feature=self.check_line(r,c,color='W')
+                    for index,count in enumerate(feature):
+                        features[index+7]+=count
+        return features
 
     def check_win(self):
         """Checks if a player has won.
@@ -49,7 +141,7 @@ class Connect6Game:
                         if count >= 6:
                             return current_color
         return 0
-
+    
     def index_to_label(self, col):
         """Converts column index to letter (skipping 'I')."""
         return chr(ord('A') + col + (1 if col >= 8 else 0))  # Skips 'I'

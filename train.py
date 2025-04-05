@@ -6,6 +6,7 @@ from collections import defaultdict
 import pickle
 import matplotlib.pyplot as plt
 import time
+from evaluate import eval
 
 
 # -------------------------------
@@ -141,7 +142,7 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
     stage_next_board=[]
     final_scores = []
     success_flags = []
-    epsilon=0.00
+    epsilon=0.0
     if stage_record:
         num_episodes=len(stage_record)
     for episode in range(num_episodes):
@@ -164,25 +165,21 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             # TODO: action selection
             rand_num=np.random.rand()
             if rand_num < epsilon:
-              action = random.choice(legal_moves)
+                action = random.choice(legal_moves)
             else:
-              expected_reward=-10000
-              rewards=[]
-              for action in range(4):
-                  if action in legal_moves:
-                      sim_state, sim_score=env.evaluate(action)
-                      total_reward=sim_score-previous_score+gamma*approximator.value(sim_state)
-                    #   print(f"state:{state}, sim_state: {sim_state},expected_reward:{total_reward},approximator.value: {approximator.value(sim_state)}")
-                    #   print(f"action: {action}")
-                      rewards.append(total_reward)
-                      if total_reward>expected_reward:                          
-                        expected_reward=total_reward
-                        best_action=action
-              action=best_action
+                expected_reward=-10000
+                for action in range(4):
+                    if action in legal_moves:
+                        _,sim_state,sim_score=eval(env.board,env.score,action)
+                        total_reward=sim_score-previous_score+gamma*approximator.value(sim_state)
+                        if total_reward>expected_reward:                          
+                            expected_reward=total_reward
+                            best_action=action
+                action=best_action
             # Note: TD learning works fine on 2048 without explicit exploration, but you can still try some exploration methods.
-            next_state, new_score =env.evaluate(action)
+            _,next_state,new_score=eval(env.board,env.score,action)
             incremental_reward = new_score - previous_score
-            trajectory.append((state.copy(), action, incremental_reward, next_state.copy()))
+            trajectory.append((state, action, incremental_reward, next_state))
             _, _, done, _ = env.step(action)
             if env.score>score_threshold:
                 print(f"episode:{episode},score:{env.score}")
@@ -190,29 +187,33 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
           
             # TODO: Store trajectory or just update depending on the implementation
             previous_score = new_score
-            state = next_state.copy()
+            state = next_state
             max_tile = max(max_tile, np.max(next_state))
 
             if stage=="stage1":
-                if max_tile>=2048 and stage_next_board_trigger:
-                    stage_next_board.append((state,new_score))
-                    stage_next_board_trigger=False
-            if stage=="stage2":
                 if max_tile>=8192 and stage_next_board_trigger:
                     stage_next_board.append((state,new_score))
                     stage_next_board_trigger=False
+            if stage=="stage2":
+                if max_tile>=16384 and stage_next_board_trigger:
+                    stage_next_board.append((state,new_score))
+                    stage_next_board_trigger=False
         #epsilon=epsilon*0.995
-        alpha=max(alpha*0.99995,0.05)
+        if alpha>0.15:
+            alpha=max(alpha*0.999995,0.15)
+        else:
+            alpha=max(alpha*0.99999,0.1)
         # TODO: If you are storing the trajectory, consider updating it now depending on your implementation.
         for state, action, incremental_reward, next_state in reversed(trajectory):
             #print(f"state:{state}, action:{action}, incremental_reward:{incremental_reward}, next_state:{next_state}")
             value = approximator.value(state)
             next_value = approximator.value(next_state)
             td_error = incremental_reward + gamma * next_value - value
-            # if episode>150:
-            # print(f"state:{state}, action:{action}, \n next_state:{next_state}")
-            # print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
-            # print(f"td_error:{td_error}")
+            # if stopper<2:
+            #     print(f"state:{state}, action:{action}, \n next_state:{next_state}")
+            #     print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
+            #     print(f"td_error:{td_error}")
+            #     stopper+=1
             # time.sleep(0.1)
             approximator.update(state, td_error, alpha)
         # print(f"weights1:{approximator.weights[0][(0,0,0,0,0,0)]}\nweights2:{approximator.weights[1][(0,0,0,0,0,0)]}")
@@ -247,15 +248,15 @@ if __name__=="__main__":
     # Run TD-Learning training
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
-    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=20000, 
-                                                alpha=0.08, gamma=0.98,stage="stage1")
+    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
+                                                alpha=0.22, gamma=0.99,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)
     print(stage_next_board)
 
     final_scores ,stage_next_board = td_learning(env, approximator_stage2, num_episodes=20000, 
-                            alpha=0.1, gamma=0.99,stage="stage2",stage_record=stage_next_board)
+                            alpha=0.2, gamma=0.99,stage="stage2",stage_record=stage_next_board)
     plot_mean_scores(final_scores=final_scores,stage=2)
     with open('stage_2.pkl', 'wb') as f:
         pickle.dump(approximator_stage2.weights, f)
