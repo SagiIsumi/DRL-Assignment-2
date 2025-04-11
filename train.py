@@ -250,13 +250,15 @@ if __name__=="__main__":
     approximator_stage1 = NTupleApproximator(board_size=4, patterns=patterns)
     approximator_stage2 =  NTupleApproximator(board_size=4, patterns=patterns)
     env = Game2048Env()
-
+    with open('stage_1.pkl', 'rb') as f:
+        approximator_stage1.weights = pickle.load(f)
     # Run TD-Learning training
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
     final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
                                                 alpha=0.18, gamma=0.98,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
+
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)
     print(stage_next_board)

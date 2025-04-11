@@ -239,9 +239,8 @@ class Game2048Env(gym.Env):
     
 env = Game2048Env()
 state=env.reset()
-file_id = "1iakEBnZs9NVSTM-S6HPGaAsTRdVrKkl7"
-url=f"https://drive.google.com/uc?id={file_id}"
-gdown.download(url , "stage_1.pkl",quiet=False, fuzzy=True)
+file_id = "1u2VJeEOoJGEDjwa5CNfemFwU97fIpdwO"
+gdown.download(id=file_id, output="stage_1.pkl", fuzzy=True)
 patterns = [[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)],[(1,0),(2,0),(1,1),(2,1),(1,2),(2,2)],[(0,0),(0,1),(0,2),(0,3),(1,0),(1,1)],[(1,0),(1,1),(1,2),(1,3),(2,0),(2,1)]]
 approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
 with open('stage_1.pkl', 'rb') as f:
@@ -272,9 +271,8 @@ if __name__=="__main__":
     
     env = Game2048Env()
     state=env.reset()
-    file_id = "1u2VJeEOoJGEDjwa5CNfemFwU97fIpdwO"
-    url=f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url , "stage_1.pkl",quiet=False, fuzzy=True)
+    # file_id = "1u2VJeEOoJGEDjwa5CNfemFwU97fIpdwO"
+    # gdown.download(id=file_id, output="stage_1.pkl", fuzzy=True)
     patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
     approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
     with open('stage_1.pkl', 'rb') as f:
