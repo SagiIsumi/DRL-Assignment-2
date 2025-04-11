@@ -56,19 +56,18 @@ class NTupleApproximator:
         Initializes the N-Tuple approximator.
         Hint: you can adjust these if you want
         """
-        
-        def default_value():
-            return 500
         self.board_size = board_size
         self.patterns = patterns
         # Create a weight dictionary for each pattern (shared within a pattern group)
         self.weights = [defaultdict(float) for _ in patterns]
+        self.Es= [defaultdict(float) for _ in patterns]
+        self.As=[defaultdict(float) for _ in patterns]
         # Generate symmetrical transformations for each pattern
         self.symmetry_patterns = []
         for pattern in self.patterns:
             syms = self.generate_symmetries(pattern)
             for syms_ in syms:
-                self.symmetry_patterns.append(sort_parts(syms_))
+                self.symmetry_patterns.append(syms_)
         print(f"symmetry_patterns:{self.symmetry_patterns}")
 
     def generate_symmetries(self, pattern):
@@ -105,6 +104,7 @@ class NTupleApproximator:
         for i , pattern in enumerate(self.symmetry_patterns):
             feature = self.get_feature(board, pattern)
             index=i//8
+            # print(f"value: {self.weights[index][feature]}")
             value += self.weights[index][feature]
         value=value
         return value
@@ -115,7 +115,10 @@ class NTupleApproximator:
         for i , pattern in enumerate(self.symmetry_patterns):
             feature = self.get_feature(board, pattern)
             index=i//8
-            self.weights[index][feature] += alpha * (td_error)/len(self.symmetry_patterns)
+            beta=  abs(self.Es[index][feature])/self.As[index][feature] if self.As[index][feature]!=0 else 1
+            self.weights[index][feature] += alpha*beta * (td_error)/len(self.symmetry_patterns)
+            self.Es[index][feature]  += (td_error)/len(self.symmetry_patterns)
+            self.As[index][feature]  += abs((td_error)/len(self.symmetry_patterns))
         
         # print(self.value(board))
         # time.sleep(2)
@@ -163,24 +166,23 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             if not legal_moves:
                 break
             # TODO: action selection
-            rand_num=np.random.rand()
-            if rand_num < epsilon:
-                action = random.choice(legal_moves)
-            else:
-                expected_reward=-100000
-                for action in range(4):
-                    if action in legal_moves:
-                        _,sim_state,sim_score=eval(env.board,env.score,action)
-                        total_reward=sim_score-previous_score+gamma*approximator.value(sim_state)
-                        if total_reward>expected_reward:                          
-                            expected_reward=total_reward
-                            best_action=action
-                action=best_action
+            expected_reward=-1000000
+            for action in range(4):
+                if action in legal_moves:
+                    _,sim_state,sim_score=eval(env.board,env.score,action)
+                    total_reward=sim_score-previous_score+gamma*approximator.value(sim_state)
+                    if total_reward>expected_reward:                          
+                        expected_reward=total_reward
+                        best_action=action
+            action=best_action
+            #print(action)
             # Note: TD learning works fine on 2048 without explicit exploration, but you can still try some exploration methods.
             _,next_state,new_score=eval(env.board,env.score,action)
             incremental_reward = new_score - previous_score
             trajectory.append((state, action, incremental_reward, next_state))
             _, _, done, _ = env.step(action)
+            # if episode%100==0:
+            #     print(next_state)
             if env.score>score_threshold:
                 print(f"episode:{episode},score:{env.score}")
                 score_threshold+=4000
@@ -199,20 +201,24 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
                     stage_next_board.append((state,new_score))
                     stage_next_board_trigger=False
         #epsilon=epsilon*0.995
-        # if episode>8000:
-        #     alpha=max(alpha*0.999995,0.15)
+        # if episode>period:
+        #     alpha=alpha*0.9
+        #     period+=10000
         # TODO: If you are storing the trajectory, consider updating it now depending on your implementation.
+        Lambda=0.0
+        target=0
         for state, action, incremental_reward, next_state in reversed(trajectory):
             #print(f"state:{state}, action:{action}, incremental_reward:{incremental_reward}, next_state:{next_state}")
             value = approximator.value(state)
             next_value = approximator.value(next_state)
-            td_error = incremental_reward + gamma * next_value - value
-            # if stopper<2:
-            #     print(f"state:{state}, action:{action}, \n next_state:{next_state}")
-            #     print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
-            #     print(f"td_error:{td_error}")
-            #     stopper+=1
-            # time.sleep(0.1)
+            target=incremental_reward+(1-Lambda)*next_value+gamma*Lambda*target
+            td_error = target - value
+            # if stopper<1:
+            # print(f"state:{state}, action:{action}, \n next_state:{next_state}")
+            # print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
+            # print(f"td_error:{td_error}")
+            # #     stopper+=1
+            # time.sleep(1)
             approximator.update(state, td_error, alpha)
         # print(f"weights1:{approximator.weights[0][(0,0,0,0,0,0)]}\nweights2:{approximator.weights[1][(0,0,0,0,0,0)]}")
         # print(f"weights1:{approximator.weights[0][(1,1,0,0,0,0)]}\nweights2:{approximator.weights[1][(1,1,0,0,0,0)]}")
@@ -226,18 +232,20 @@ def td_learning(env, approximator, num_episodes=50000, alpha=0.1, gamma=0.99,sta
             success_rate = np.sum(success_flags[-100:]) / 100
             print(f"Episode {episode+1}/{num_episodes} | Avg Score: {avg_score:.2f} | Success Rate: {success_rate:.2f}, epsilon:{epsilon}")
             print(f"value:{value}, next_value:{next_value},incremental_reward:{incremental_reward},td_error:{td_error}")
+            print(f"final_board:{env.board}")
             # print(f"dictionary: {approximator.weights[0]}")
             # sorted_weights=sorted(approximator.weights[0].items(), key=lambda x: x[1], reverse=True)
             # print(f"sorted_weights:{sorted_weights}")
-        if len(stage_next_board)>=20000:
+        if len(stage_next_board)>=30000:
             return final_scores,stage_next_board
     return final_scores,stage_next_board
 
 if __name__=="__main__":
     from student_agent import Game2048Env
     # TODO: Define your own n-tuple patterns
+    patterns = [[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)],[(1,0),(2,0),(1,1),(2,1),(1,2),(2,2)],[(0,0),(0,1),(0,2),(0,3),(1,0),(1,1)],[(1,0),(1,1),(1,2),(1,3),(2,0),(2,1)]]
     #patterns = [[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)],[(0,1),(1,1),(2,1),(3,1),(2,2),(3,2)],[(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)],[(0,2),(1,2),(2,2),(0,3),(1,3),(2,3)]]
-    patterns = [[(0,0),(0,1),(0,2),(1,0),(1,1),(1,2)],[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1)],[(0,0),(1,0),(2,0),(3,0),(0,1),(1,1)],[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)]]
+    #patterns = [[(0,0),(0,1),(0,2),(1,0),(1,1),(1,2)],[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1)],[(0,0),(1,0),(2,0),(3,0),(0,1),(1,1)],[(0,0),(1,0),(2,0),(3,0),(2,1),(3,1)]]
     # patterns = [[(0,0),(0,1),(1,0),(1,1)],[(0,0),(0,1),(0,2),(1,0)]]
     approximator_stage1 = NTupleApproximator(board_size=4, patterns=patterns)
     approximator_stage2 =  NTupleApproximator(board_size=4, patterns=patterns)
@@ -246,16 +254,20 @@ if __name__=="__main__":
     # Run TD-Learning training
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
-    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=12000, 
-                                                alpha=0.16, gamma=0.99,stage="stage1")
+    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
+                                                alpha=0.18, gamma=0.98,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
     with open('stage_1.pkl', 'wb') as f:
         pickle.dump(approximator_stage1.weights, f)
     print(stage_next_board)
 
-    final_scores ,stage_next_board = td_learning(env, approximator_stage2, num_episodes=20000, 
-                            alpha=0.2, gamma=0.99,stage="stage2",stage_record=stage_next_board)
+    final_scores ,stage_next_board = td_learning(env, approximator_stage2, num_episodes=30000, 
+                            alpha=0.18, gamma=0.99,stage="stage2",stage_record=stage_next_board)
     plot_mean_scores(final_scores=final_scores,stage=2)
     with open('stage_2.pkl', 'wb') as f:
         pickle.dump(approximator_stage2.weights, f)
     print(stage_next_board)
+
+    #10 : TC, alpha 0.15
+    #14 : TD, alpha 0.15  60000 episodes
+    #15 : TD , 0.15 +gamma =1.0

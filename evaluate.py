@@ -60,3 +60,5 @@ def merge_line(line):
                 index += 1
 
     return new_line, score, moved
+
+    
