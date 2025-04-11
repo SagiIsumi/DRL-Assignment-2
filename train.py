@@ -255,7 +255,7 @@ if __name__=="__main__":
     # Run TD-Learning training
     # Note: To achieve significantly better performance, you will likely need to train for over 100,000 episodes.
     # However, to quickly verify that your implementation is working correctly, you can start by running it for 1,000 episodes before scaling up.
-    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=60000, 
+    final_scores,stage_next_board = td_learning(env, approximator_stage1, num_episodes=30000, 
                                                 alpha=0.18, gamma=0.98,stage="stage1")
     plot_mean_scores(final_scores=final_scores,stage=1)
 
@@ -271,5 +271,5 @@ if __name__=="__main__":
     print(stage_next_board)
 
     #10 : TC, alpha 0.15
-    #14 : TD, alpha 0.15  60000 episodes
-    #15 : TD , 0.15 +gamma =1.0
+    #14 : TC, alpha 0.18  60000 episodes retrain
+    #15 : TC , alpha 0.18  30000 episodes retrain

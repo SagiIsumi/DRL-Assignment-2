@@ -30,14 +30,8 @@ class TD_MCTS_Node:
         # A node is fully expanded if no legal actions remain untried.
         return len(self.untried_actions) == 0
 
-def normalize(values):
-  min_val = min(values)
-  max_val = max(values)
 
-  if max_val == min_val:
-      return [0] * len(values)
 
-  return [(2 * (x - min_val) / (max_val - min_val)) - 1 for x in values]
 # TD-MCTS class utilizing a trained approximator for leaf evaluation
 class TD_MCTS:
     def __init__(self, env, approximator, iterations=500, exploration_constant=1.41, rollout_depth=10, gamma=0.99):
@@ -47,6 +41,8 @@ class TD_MCTS:
         self.c = exploration_constant
         self.rollout_depth = rollout_depth
         self.gamma = gamma
+        self.max = -100000
+        self.min = 100000
 
     def create_env_from_state(self, state, score):
         # Create a deep copy of the environment with the given state and score.
@@ -54,14 +50,21 @@ class TD_MCTS:
         new_env.board = state.copy()
         new_env.score = score
         return new_env
+    def normalize(self,values):
+        min_val = self.min
+        max_val = self.max
 
+        if max_val == min_val:
+            return [0] * len(values)
+
+        return [(2 * (x - min_val) / (max_val - min_val)) - 1 for x in values]
     def select_child(self, node,sim_env):
         # TODO: Use the UCT formula: Q + c * sqrt(log(parent_visits)/child_visits) to select the child
         if node.untried_actions:
           return node
         else:
           child_reward=[child.total_reward for child in node.children.values()]
-          child_reward=normalize(child_reward)
+          child_reward=self.normalize(child_reward)
           child_visits=[child.visits for child in node.children.values()]
           # print(f"child_reward:{child_reward}, child_visits:{child_visits}")
           complmentary=[self.c * np.sqrt(np.log(node.visits) / child_visits[i] ) for i in range(len(child_reward))]
@@ -106,6 +109,10 @@ class TD_MCTS:
         # TODO: Propagate the reward up the tree, updating visit counts and total rewards.
         node.visits += 1
         node.total_reward += (reward-node.total_reward)/node.visits
+        if node.total_reward>self.max:
+            self.max=node.total_reward
+        if node.total_reward<self.min:  
+            self.min=node.total_reward
         if node.parent:
           self.backpropagate(node.parent, reward)
     def run_simulation(self, root):
