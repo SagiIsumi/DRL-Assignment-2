@@ -27,7 +27,7 @@ class Game2048Env(gym.Env):
         # Action space: 0: up, 1: down, 2: left, 3: right
         self.action_space = spaces.Discrete(4)
         self.actions = ["up", "down", "left", "right"]
-
+        self.afterstate_board=None
         self.last_move_valid = True  # Record if the last move was valid
 
         self.reset()
@@ -43,6 +43,7 @@ class Game2048Env(gym.Env):
     def add_random_tile(self):
         """Add a random tile (2 or 4) to an empty cell"""
         empty_cells = list(zip(*np.where(self.board == 0)))
+        self.afterstate_board=self.board.copy()
         if empty_cells:
             x, y = random.choice(empty_cells)
             self.board[x, y] = 2 if random.random() < 0.9 else 4
@@ -239,7 +240,7 @@ class Game2048Env(gym.Env):
     
 env = Game2048Env()
 state=env.reset()
-file_id = "1u2VJeEOoJGEDjwa5CNfemFwU97fIpdwO"
+file_id = "1490yKCiHxSWYitM44gvqkUCv7tK2-987"
 gdown.download(id=file_id, output="stage_1.pkl", fuzzy=True)
 patterns = [[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)],[(1,0),(2,0),(1,1),(2,1),(1,2),(2,2)],[(0,0),(0,1),(0,2),(0,3),(1,0),(1,1)],[(1,0),(1,1),(1,2),(1,3),(2,0),(2,1)]]
 approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
@@ -249,15 +250,14 @@ with open('stage_1.pkl', 'rb') as f:
     else:
         print("No File!!")
 
-td_mcts = TD_MCTS(env, approximator_1, iterations=200, exploration_constant=1.41, rollout_depth=20, gamma=0.99)
+td_mcts = TD_MCTS(env, approximator_1, iterations=5, exploration_constant=0.0, rollout_depth=20, gamma=0.99)
 
 def get_action(state, score):
     env.board=state
     env.score=score
     #return random.choice([0, 1, 2, 3]) # Choose a random action
-    
     # You can submit this random agent to evaluate the performance of a purely random strategy.
-    root = TD_MCTS_Node(state, env.score)
+    root = TD_MCTS_Node(state, env.score,env)
 
     # Run multiple simulations to build the MCTS tree
     for _ in range(td_mcts.iterations):
