@@ -103,9 +103,9 @@ class TD_MCTS:
         rand_num=np.random.rand()
         # if sim_env.is_game_over():
         #   return 0
-        if rand_num<1.0 or depth==0 or sim_env.is_game_over():
+        if rand_num<0.85 or depth==0 or sim_env.is_game_over():
           #print(self.approximator.value(sim_env.board))
-          return self.approximator.value(sim_env.afterstate_board)
+          return self.approximator.value(sim_env.board)
         
         action = random.choice([a for a in range(4) if sim_env.is_move_legal(a)])
         state, reward, done, _ =sim_env.step(action)
