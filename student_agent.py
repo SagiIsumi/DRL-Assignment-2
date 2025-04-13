@@ -240,7 +240,7 @@ class Game2048Env(gym.Env):
     
 env = Game2048Env()
 state=env.reset()
-file_id = "1490yKCiHxSWYitM44gvqkUCv7tK2-987"
+file_id = "1iVxGGoZfPHal3S4B1axgJ8r52xpAGfY1"
 gdown.download(id=file_id, output="stage_1.pkl", fuzzy=True)
 patterns = [[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)],[(1,0),(2,0),(1,1),(2,1),(1,2),(2,2)],[(0,0),(0,1),(0,2),(0,3),(1,0),(1,1)],[(1,0),(1,1),(1,2),(1,3),(2,0),(2,1)]]
 approximator_1=NTupleApproximator(board_size=4, patterns=patterns)
@@ -264,7 +264,7 @@ def get_action(state, score):
         td_mcts.run_simulation(root)
 
     # Select the best action (based on highest visit count)
-    best_act, _ = td_mcts.best_action_distribution(env,root)
+    best_act, _ , _ , _= td_mcts.best_action_distribution(env,root)
     return best_act
 
 if __name__=="__main__":
