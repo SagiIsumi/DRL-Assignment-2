@@ -103,7 +103,7 @@ class TD_MCTS:
         rand_num=np.random.rand()
         if sim_env.is_game_over():
           return sim_env.score
-        if rand_num<1.0 or depth==0:
+        if rand_num<0.95 or depth==0:
           #print(self.approximator.value(sim_env.board))
           return sim_env.score+self.approximator.value(sim_env.afterstate_board)
         
