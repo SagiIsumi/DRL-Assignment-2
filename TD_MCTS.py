@@ -74,8 +74,8 @@ class TD_MCTS:
                 ucb1_scores.insert(act,-1.01)
         #   print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
         #   print(f"child_reward:{child_reward}, child_visits:{child_visits}")
-          if len(node.children[np.argmax(ucb1_scores)].children)>=8:
-             index=np.random.choice(range(8), 1)[0]
+          if len(node.children[np.argmax(ucb1_scores)].children)>=15:
+             index=np.random.choice(range(15), 1)[0]
              return self.select_child(node.children[np.argmax(ucb1_scores)].children[index],sim_env)
           state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
           afterstate_node=node.children[np.argmax(ucb1_scores)]
