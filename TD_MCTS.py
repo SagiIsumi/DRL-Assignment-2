@@ -61,12 +61,10 @@ class TD_MCTS:
         if node.untried_actions:
           return self.expansion(sim_env,node)
         else:
-          child_reward = [sum(child.total_reward*child.visits for child in child_list)/ sum(child.visits for child in child_list)
-                for child_list in node.children.values()]
+          child_reward = [child.total_reward for child in node.children.values()]
           child_reward=self.normalize(child_reward)
 
-          child_visits=[sum(child.visits for child in child_list)
-                for child_list in node.children.values()]
+          child_visits=[child.visits for child in node.children.values()]
           
           complmentary=[self.c * np.sqrt(np.log(node.visits) / child_visits[i] ) for i in range(len(child_reward))]
 
@@ -76,18 +74,18 @@ class TD_MCTS:
                 ucb1_scores.insert(act,-1.01)
         #   print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
         #   print(f"child_reward:{child_reward}, child_visits:{child_visits}")
-          if len(node.children[np.argmax(ucb1_scores)]) == 8:
-                  index=np.random.choice(len(node.children[np.argmax(ucb1_scores)]), 1, replace=False)[0]
-                  return self.select_child(node.children[np.argmax(ucb1_scores)][index],sim_env)
+          if len(node.children[np.argmax(ucb1_scores)].children)>=8:
+             index=np.random.choice(range(8), 1)[0]
+             return self.select_child(node.children[np.argmax(ucb1_scores)].children[index],sim_env)
           state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
+          afterstate_node=node.children[np.argmax(ucb1_scores)]
           try:
-            for index,child in enumerate(node.children[np.argmax(ucb1_scores)]):
+            for child in node.children[np.argmax(ucb1_scores)].children.values():
               if np.array_equal(child.state, state):
                   #print(f"state:{state},child.state:{child.state}")
-                  return self.select_child(node.children[np.argmax(ucb1_scores)][index],sim_env)
-              
-            node.children[np.argmax(ucb1_scores)].append(TD_MCTS_Node(state.copy(), reward, sim_env, node, np.argmax(ucb1_scores)))
-            expanded_node = node.children[np.argmax(ucb1_scores)][-1]
+                  return self.select_child(child,sim_env)  
+            afterstate_node.children[len(afterstate_node.children)]=TD_MCTS_Node(state.copy(), reward, sim_env, afterstate_node, np.argmax(ucb1_scores))
+            expanded_node = afterstate_node.children[len(afterstate_node.children)-1]
             return expanded_node
           except:
             print(ucb1_scores)
@@ -96,17 +94,16 @@ class TD_MCTS:
           return node
         item =node.untried_actions.pop(0)
         state, reward, done, _ =sim_env.step(item)
-        if item not in node.children.keys():
-          node.children[item] = []
-        node.children[item].append(TD_MCTS_Node(state.copy(), reward, sim_env, node, item))
-        expanded_node = node.children[item][-1]
+        node.children[item]=TD_MCTS_Node(sim_env.afterstate_board.copy(), reward, sim_env, node, item)
+        node.children[item].children[len(node.children[item].children)]=TD_MCTS_Node(state.copy(), reward, sim_env,node.children[item], item)
+        expanded_node = node.children[item].children[len(node.children[item].children)-1]
         return expanded_node
     def rollout(self, sim_env, depth):
         # TODO: Perform a random rollout from the current state up to the specified depth.
         rand_num=np.random.rand()
-        # if sim_env.is_game_over():
-        #   return 0
-        if rand_num<1.0 or depth==0 or sim_env.is_game_over():
+        if sim_env.is_game_over():
+          return sim_env.score
+        if rand_num<1.0 or depth==0:
           #print(self.approximator.value(sim_env.board))
           return sim_env.score+self.approximator.value(sim_env.afterstate_board)
         
@@ -146,13 +143,12 @@ class TD_MCTS:
         Computes the visit count distribution for each action at the root node.
         '''
         legal_moves=[action for action in range(4) if env.is_move_legal(action)]
-        child_reward = [sum(child.total_reward for child in child_list) / len(child_list)
-                for child_list in root.children.values()]
+        child_reward = [child.total_reward for child in root.children.values()]
+        child_visits=[child.visits for child in root.children.values()]
         for act in range(4):
              if act not in root.children.keys():
                child_reward.insert(act,-1.01)
-        child_visits=[sum(child.visits for child in child_list)
-                for child_list in root.children.values()]
+
         for act in range(4):
              if act not in root.children.keys():
                child_visits.insert(act,0)
