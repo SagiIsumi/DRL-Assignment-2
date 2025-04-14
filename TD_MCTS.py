@@ -61,7 +61,7 @@ class TD_MCTS:
         if node.untried_actions:
           return self.expansion(sim_env,node)
         else:
-          child_reward = [sum(child.total_reward for child in child_list) / len(child_list)
+          child_reward = [sum(child.total_reward*child.visits for child in child_list)/ sum(child.visits for child in child_list)
                 for child_list in node.children.values()]
           child_reward=self.normalize(child_reward)
 
@@ -76,6 +76,9 @@ class TD_MCTS:
                 ucb1_scores.insert(act,-1.01)
         #   print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
         #   print(f"child_reward:{child_reward}, child_visits:{child_visits}")
+          if len(node.children[np.argmax(ucb1_scores)]) == 8:
+                  index=np.random.choice(len(node.children[np.argmax(ucb1_scores)]), 1, replace=False)[0]
+                  return self.select_child(node.children[np.argmax(ucb1_scores)][index],sim_env)
           state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
           try:
             for index,child in enumerate(node.children[np.argmax(ucb1_scores)]):
@@ -105,7 +108,7 @@ class TD_MCTS:
         #   return 0
         if rand_num<1.0 or depth==0 or sim_env.is_game_over():
           #print(self.approximator.value(sim_env.board))
-          return self.approximator.value(sim_env.afterstate_board)
+          return sim_env.score+self.approximator.value(sim_env.afterstate_board)
         
         action = random.choice([a for a in range(4) if sim_env.is_move_legal(a)])
         state, reward, done, _ =sim_env.step(action)
@@ -121,7 +124,7 @@ class TD_MCTS:
         if node.total_reward<self.min:  
             self.min=node.total_reward
         if node.parent:
-          self.backpropagate(node.parent,node.score-node.parent.score+self.gamma*reward)
+          self.backpropagate(node.parent,self.gamma*reward)
     def run_simulation(self, root):
         node = root
         sim_env = self.create_env_from_state(node.state, node.score)
