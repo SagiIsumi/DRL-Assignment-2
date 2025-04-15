@@ -250,7 +250,7 @@ with open('stage_1.pkl', 'rb') as f:
     else:
         print("No File!!")
 
-td_mcts = TD_MCTS(env, approximator_1, iterations=150, exploration_constant=1.0, rollout_depth=20, gamma=1.0)
+td_mcts = TD_MCTS(env, approximator_1, iterations=150, exploration_constant=2.25, rollout_depth=20, gamma=1.0)
 
 def get_action(state, score):
     env.board=state

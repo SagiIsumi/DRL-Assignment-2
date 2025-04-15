@@ -74,12 +74,12 @@ class TD_MCTS:
                 ucb1_scores.insert(act,-1.01)
         #   print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
         #   print(f"child_reward:{child_reward}, child_visits:{child_visits}")
-          if len(node.children[np.argmax(ucb1_scores)].children)>=4:
-             index=np.random.choice(range(4), 1)[0]
-             return self.select_child(node.children[np.argmax(ucb1_scores)].children[index],sim_env)
-          state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
-          afterstate_node=node.children[np.argmax(ucb1_scores)]
           try:
+            if len(node.children[np.argmax(ucb1_scores)].children)>=10:
+              index=np.random.choice(range(10), 1)[0]
+              return self.select_child(node.children[np.argmax(ucb1_scores)].children[index],sim_env)
+            state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
+            afterstate_node=node.children[np.argmax(ucb1_scores)]
             for child in node.children[np.argmax(ucb1_scores)].children.values():
               if np.array_equal(child.state, state):
                   #print(f"state:{state},child.state:{child.state}")
@@ -103,7 +103,7 @@ class TD_MCTS:
         rand_num=np.random.rand()
         if sim_env.is_game_over():
           return sim_env.score
-        if rand_num<0.99 or depth==0:
+        if rand_num<0.98 or depth==0:
           #print(self.approximator.value(sim_env.board))
           return sim_env.score+self.approximator.value(sim_env.afterstate_board)
         
