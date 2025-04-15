@@ -262,6 +262,8 @@ def get_action(state, score):
     #     td_mcts.c=2.56
     #     td_mcts.iterations=150
     # Run multiple simulations to build the MCTS tree
+    td_mcts.max=float('-inf')
+    td_mcts.min=float('inf')
     for _ in range(td_mcts.iterations):
         td_mcts.run_simulation(root)
 
