@@ -7,6 +7,7 @@ from pathlib import Path
 import time
 import re
 import sys
+import itertools
 
 class TD_learn():
     def __init__(self):
@@ -65,11 +66,10 @@ class TD_learn():
                             return current_color
                 
         return 0
-    
-    def get_act_zone(self):
+    def get_act_zone(self,r=2):
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
         act_zone=set()
-        radius=2
+        radius=r
         for r in range(self.size):
             for c in range(self.size):
                 if self.board[r, c] != 0:
@@ -78,12 +78,12 @@ class TD_learn():
                             nr=r+rad*dr
                             nc=c+rad*dc
                             if 0 <= nr < self.size and 0 <= nc < self.size and self.board[nr][nc] == 0:
-                                act_zone.add((nr, nc))
+                                    act_zone.add((nr, nc))
         if act_zone ==set():
             act_zone.add((self.size//2,self.size//2))
         return act_zone
     
-    def check_line(self,state, x, y,color):
+    def check_line(self,state, x, y,color,debug=False):
         features=[0,0,0,0,0,0,0,0]
         if color =='B':
             attacker=1
@@ -96,6 +96,7 @@ class TD_learn():
             end=[-4,7]
             count=0
             connect_count=0
+            connect_counting=0
             zero_count=0
             accumulated_zero=0
             added=False
@@ -117,15 +118,18 @@ class TD_learn():
                 elif 0 <= nx < self.size and 0 <= ny < self.size:
                     if state[nx,ny]==attacker: 
                         count+=1
+                        connect_counting+=1
                         zero_count=0
-                        if count>connect_count and index==6:
-                            connect_count=count                        
+                        if connect_counting>connect_count and index==6:
+                            connect_count=connect_counting                     
                     elif state[nx,ny]==defender:
                         end[1]=index
                         # print(nx,ny,state[nx,ny])
                         break
                     else:
-                        connect_count=count
+                        if connect_counting>connect_count:
+                            connect_count=connect_counting
+                        connect_counting=0
                         zero_count+=1
                         accumulated_zero+=1
                         if zero_count==3:
@@ -164,13 +168,12 @@ class TD_learn():
                     features[5]+=1
                 elif count==3:
                     features[3]+=1
-                elif 0<=x+4*dx < self.size and 0<=y+4*dy <self.size:
-                    if count==4 and state[x+1*dx,y+1*dy]==0 and state[x+3*dx,y+3*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
-                    elif count==4 and state[x+1*dx,y+1*dy]==0 and state[x+2*dx,y+2*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
+                elif connect_count==4 and zero_count==3:
+                    features[0]+=1
+                elif count==4 and (accumulated_zero-zero_count)>2:
+                    features[2]+=1
+                    added =True
+
                 if connect_count==5 and end[0]==-2:
                     features[1]+=1
                     added =True
@@ -194,19 +197,15 @@ class TD_learn():
                 elif count==3 and zero_count>=2 and end[0]<-2:
                     features[2]+=1
                 elif count==3 and (accumulated_zero-zero_count)>2:
-                    features[5]+=1
+                    features[4]+=1
                 elif count==3:
                     features[3]+=1
-                elif 0 <= x+4*dx < self.size and 0 <= y+4*dy <self.size:
-                    if count==4 and state[x+1*dx,y+1*dy]==0 and state[x+3*dx,y+3*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
-                    elif count==4 and state[x+1*dx,y+1*dy]==0 and state[x+2*dx,y+2*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
-                if connect_count==4 and end[0]==-3 and zero_count==2:
+                elif connect_count==4 and end[0]<=-3 and zero_count>=2:
                     features[1]+=1 
-                    added =True 
+                    added =True
+                elif count==4 and (accumulated_zero-zero_count)==3:
+                    features[2]+=1
+                    added =True
                 elif 0 <= x+7*dx < self.size and 0 <= y+7*dy <self.size:
                     if connect_count==4 and end[0]==-2 and state[x+6*dx,y+6*dy]==0 and state[x+7*dx,y+7*dy]==0 and zero_count!=3:
                         features[1]+=1
@@ -223,73 +222,63 @@ class TD_learn():
                         features[1]+=1
                         added =True
                 
-                if count>=4 and not added and (accumulated_zero-zero_count)<2:
+                if count>=4 and not added:
                     features[0]+=1
-                elif count>=4 and not added:
-                    features[3]+=1
                     
                 
             elif interval>8:
+                if debug:
+                    print(f"debug: {x},{y},dx:{dx},dy:{dy}")
+                    print(f'interval:{interval},count:{count}, connect:{connect_count},zero_count:{zero_count},accumulated_zero:{accumulated_zero},end:{end}')
                 if count==2:
                     features[4]+=1
                 elif count==3 and (accumulated_zero-zero_count)>2:
                     features[5]+=1
                 elif count == 3:
                     features[2]+=1
-                elif x+4*dx < self.size and y+4*dy <self.size:
-                    if count==4 and state[x+1*dx,y+1*dy]==0 and state[x+3*dx,y+3*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
-                if x+4*dx < self.size and y+4*dy <self.size:
-                    if count==4 and state[x+1*dx,y+1*dy]==0 and state[x+2*dx,y+2*dy]==0 and state[x+4*dx,y+4*dy]==0:
-                        features[2]+=1
-                        added =True
-                if connect_count==4 and end[0]<=-3 and zero_count>=2:
+                elif connect_count==4 and end[0]<=-3 and zero_count>=2:
                     features[1]+=1  
                     added =True
+                elif count==4 and (accumulated_zero-zero_count)==3:
+                    features[2]+=1
+                    added =True
                 elif x+7*dx < self.size and y+7*dy <self.size:
-                    if connect_count==4 and end[0]==-2 and state[x+6*dx,y+6*dy]==0 and state[x+7*dx,y+7*dy]==0 and zero_count!=3:
+                    if connect_count==4  and state[x+6*dx,y+6*dy]==0 and state[x+7*dx,y+7*dy]==0 and zero_count!=3:
                         features[1]+=1
                         added =True
                     elif connect_count==5 and state[x+1*dx,y+1*dy]==0 and state[x+7*dx,y+7*dy]==0:
                         features[1]+=1
                         added =True
                 if x+8*dx < self.size and y+8*dy <self.size:
-                    if connect_count==4 and end[0]==-2 and state[x+7*dx,y+7*dy]==0 and state[x+8*dx,y+8*dy]==0 and zero_count!=3:
+                    if connect_count==4 and state[x+7*dx,y+7*dy]==0 and state[x+8*dx,y+8*dy]==0 and zero_count!=3:
                         features[1]+=1
                         added =True
                 if x+5*dx < self.size and y+5*dy <self.size:
-                    if connect_count==5 and state[x-1,y-1]==0 and state[x+5*dx,y+5*dy]==0:
+                    if connect_count==5 and state[x-1*dx,y-1*dy]==0 and state[x+5*dx,y+5*dy]==0:
                         features[1]+=1
                         added =True
                 
-                if count>=4 and not added and (accumulated_zero-zero_count)<2:
+                if count>=4 and not added:
                     features[0]+=1
-                elif count==4 and not added:
-                    if x+7*dx < self.size and y+7*dy <self.size:
-                        if state[x+1*dx,y+1*dy]==0 and state[x+2*dx,y+2*dy]==0 and state[x+7*dx,y+7*dy]==0:
-                            features[2]+=1
-                    else:
-                        features[3]+=1
                     
 
         return features
     
-    def get_feature(self,state,mycolor):
+    def get_feature(self,state,mycolor,debug=False):
         features=[0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0]
         mycolor=mycolor.upper()
         for r in range(self.size):
             for c in range(self.size):
                 if state[r, c] == 1:
-                    feature=self.check_line(state,r,c,color='B')
+                    feature=self.check_line(state,r,c,color='B',debug=debug)
                     for index,count in enumerate(feature):
                         if mycolor == 'B':
                             features[index]+=count
                         else:
                             features[index+8]+=count
                 elif state[r, c] == 2:
-                    feature=self.check_line(state,r,c,color='W')
+                    feature=self.check_line(state,r,c,color='W', debug=debug)
                     for index,count in enumerate(feature):
                         if mycolor == 'W':
                             features[index]+=count
@@ -300,13 +289,15 @@ class TD_learn():
     
     def index_to_label(self, col):
         """Converts column index to letter (skipping 'I')."""
-        return chr(ord('A') + col )  #NO Skips 'I'
+        return chr(ord('A') + col + (1 if col >= 8 else 0))  # Skips 'I'
 
     def label_to_index(self, col_char):
         """Converts letter to column index (accounting for missing 'I')."""
         col_char = col_char.upper()
-        return ord(col_char) - ord('A')
-    
+        if col_char >= 'J':  # 'I' is skipped
+            return ord(col_char) - ord('A') - 1
+        else:
+            return ord(col_char) - ord('A')
     def greedy(self,epsilon):
         pass
     def play_move(self, color, move):
@@ -392,15 +383,19 @@ class TD_learn():
     def eval(self,feature):
         feature_tensor=torch.tensor(feature, dtype=torch.float32)
         # value=self.model(feature_tensor).detach().numpy()
-        weights=[20.0,45.0,4.0,3.0,2.5,1.0,0.1,250,-19.0,-44.0,-4.0,-3.0,-2.5,-1.0,-0.1,-199]
-        weights=torch.tensor(weights)
+        weights=[48.0,100.0,5.0,3.2,2.5,1.0,0.1,1500.0,-300.0,-600.0,-12.0,-5.0,-2.8,-1.2,-0.1,-900.0]
+        weights=torch.tensor(weights, dtype=torch.float32)
         value=torch.dot(feature_tensor,weights)
+        if feature[0]>2:
+            value+=50
+        if feature[0]>0 and feature[1]>0:
+            value+=50
+        if feature[1]>1:
+            value+=50
 
         return value
-    def board_play(self,color):
-        done=False
-        while not done:
-            self.play_move()
+
+
     def show_board(self):
         """Displays the board as text."""
         print("= ")
@@ -507,6 +502,221 @@ class TD_learn():
 
     def save_model_weights(self):
         torch.save(self.model.state_dict(),'C6_weights.pth')
+
+
+class alpha_beta_MCTS_Node:
+    def __init__(self, state, parent=None):
+        self.state = state
+        self.parent = parent
+        self.children = []
+        self.move_str=[]
+        self.visits = 0
+        self.total_reward = 0.0
+        self.untried_actions = self.get_children(state)  # 初始未展開的動作
+    def is_fully_expanded(self):
+        return len(self.untried_actions) == 0
+    def get_children(self,state,r=1):
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        act_zone=[]
+        radius=r
+        for r in range(19):
+            for c in range(19):
+                if state[r, c] != 0:
+                    for dr, dc in directions:
+                        for rad in range(-radius,radius+1):
+                            nr=r+rad*dr
+                            nc=c+rad*dc
+                            if 0 <= nr < 19 and 0 <= nc < 19 and state[nr][nc] == 0:
+                                if (nr,nc) not in act_zone:
+                                    act_zone.append((nr, nc))
+        
+        if act_zone==[]:
+            act_zone.append((19//2,19//2))
+        # else:
+        #     act_zone = list(itertools.combinations(act_zone, 2))
+        return act_zone
+
+
+class alpha_beta_MCTS:
+    def __init__(self, value_func, iterations=500, exploration_constant=1.41, rollout_depth=10, gamma=0.99):
+        self.value_func = value_func
+        self.iterations = iterations
+        self.c = exploration_constant
+        self.rollout_depth = rollout_depth
+        self.gamma = gamma
+        self.undo_positions = []
+        self.attacker_color=None
+    
+    def normalize(self,values):
+        min_val = min(values)
+        max_val = max(values)
+
+        if max_val == min_val:
+            return [0] * len(values)
+
+        return [(2 * (x - min_val) / (max_val - min_val)) - 1 for x in values]
+    def select_child(self, node ):
+        # TODO: Use the UCT formula: Q + c * sqrt(log(parent_visits)/child_visits) to select the child
+        if node.untried_actions:
+            return node
+        else:
+            if (self.timer%4)<2:
+                color='B' if self.attacker_color=='B' else 'W'
+            else:
+                color='W' if self.attacker_color=='B' else 'B'
+            
+            child_reward=[child.total_reward for child in node.children]
+            child_reward=self.normalize(child_reward)
+            child_visits=[child.visits for child in node.children]
+            #print(f"child_reward:{child_reward}, child_visits:{child_visits}")
+            complmentary=[self.c * np.sqrt(np.log(node.visits) / child_visits[i] ) for i in range(len(child_reward))]
+            ucb1_scores =[child_reward[i]  + self.c * np.sqrt(np.log(node.visits) / child_visits[i] ) for i in range(len(child_reward))]
+            #print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
+            # print(np.argmax(ucb1_scores))
+            self.undo_positions.append(self.value_func.play_move(color,node.move_str[np.argmax(ucb1_scores)]))
+            self.timer+=1
+            return self.select_child(node.children[np.argmax(ucb1_scores)])
+    def expansion(self,node):
+        if (self.timer%4)<2:
+            color='B' if self.attacker_color=='B' else 'W'
+        else:
+            color='W' if self.attacker_color=='B' else 'B'
+        if self.value_func.check_win():
+            return node
+        empty_positions = [(r, c) for r in range(19) for c in range(19) if self.value_func.board[r, c] == 0]
+        while True:
+            action = node.untried_actions.pop()
+            # if len(action) == 2:
+            #     if action[0] in empty_positions and action[1] in empty_positions:
+            #         break
+            # else:
+            if action in empty_positions:
+                break        
+        r, c =action
+        move_str = f"{self.value_func.index_to_label(c)}{r+1}"
+        #print("move_str",move_str)
+        self.undo_positions.append(self.value_func.play_move(color,move_str))
+        child_node = alpha_beta_MCTS_Node(self.value_func.board.copy(), parent=node)
+        #print(f"move_str:{move_str},node_str:{node.move_str}",file=sys.stderr)
+        node.children.append(child_node)
+        node.move_str.append(move_str)
+        self.timer+=1
+        return child_node
+    
+    def alpha_beta(self, depth, alpha, beta):
+        if depth == 0 or self.value_func.check_win()!=0:
+            feature=self.value_func.get_feature(self.value_func.board,self.attacker_color)
+            # print(self.value_func.board,file=sys.stderr)
+            #print(f"feature:{feature}",file=sys.stderr)
+            #time.sleep(2)
+            value=self.value_func.eval(feature)
+            #print(f"value:{value}",file=sys.stderr)
+            self.value_func.game_over=False
+            #print(self.value_func.board)
+            return value
+
+        act_zone = self.value_func.get_act_zone(r=1)
+        empty_positions = [(r, c) for r in range(19) for c in range(19) if self.value_func.board[r, c] == 0]
+        # if len(act_zone) >1:
+        #     act_zone = list(itertools.combinations(act_zone, 2))
+        if (self.timer%4)<2:
+            color='B' if self.attacker_color=='B' else 'W'
+        else:
+            color='W' if self.attacker_color=='B' else 'B'
+        
+        if (self.timer%4)<2:
+            value = float('-inf')
+            for act in act_zone:
+                #print(f"act_max:{act}",file=sys.stderr)
+                # if len(act) == 2:
+                #     if act[0] in empty_positions and act[1] in empty_positions:
+                #         move_str = ",".join(f"{self.value_func.index_to_label(c)}{r+1}" for r, c in act)
+                # else:
+                if act in empty_positions:       
+                    r, c =act
+                    move_str = f"{self.value_func.index_to_label(c)}{r+1}"
+                    self.undo_positions.append(self.value_func.play_move(color,move_str))
+                    self.timer+=1
+                    value = max(value, self.alpha_beta(depth - 1, alpha, beta))
+                    alpha = max(alpha, value)
+                    self.value_func.undo(self.undo_positions.pop())
+                    self.timer-=1
+                    if alpha >= beta:
+                        break
+            return value
+        else:
+            value = float('inf')
+            for act in act_zone:
+                #print(f"act_min:{act}",file=sys.stderr)
+                # if len(act) == 2:
+                #     if act[0] in empty_positions and act[1] in empty_positions:
+                #         move_str = ",".join(f"{self.value_func.index_to_label(c)}{r+1}" for r, c in act)
+                # else:
+                if act in empty_positions:       
+                    r, c =act
+                    move_str = f"{self.value_func.index_to_label(c)}{r+1}"
+                    #print(f"color:{color},self.timer:{self.timer}",file=sys.stderr)
+                    self.undo_positions.append(self.value_func.play_move(color,move_str))
+                    self.timer+=1
+                    value = min(value, self.alpha_beta(depth - 1, alpha, beta))
+                    beta = min(beta, value)
+                    self.value_func.undo(self.undo_positions.pop())
+                    self.timer-=1
+                    if beta <= alpha:
+                        break
+            return value
+    def backpropagate(self, node, reward):
+        # TODO: Propagate the reward up the tree, updating visit counts and total rewards.
+        node.visits += 1
+        node.total_reward += (reward-node.total_reward)/node.visits
+        if node.parent:
+          self.backpropagate(node.parent, reward)
+    def stimulation(self,root, color,timer):
+        self.attacker_color=color
+        if len(root.untried_actions) >self.iterations:
+            self.iterations=len(root.untried_actions)
+        for _ in range(self.iterations):
+            node = root
+            self.timer=timer
+            #print(self.value_func.board,file=sys.stderr)
+            selected_node=self.select_child(node)
+
+            # TODO: Expansion: if the node has untried actions, expand one.
+            expanded_node=self.expansion(selected_node)
+            #print(f"expanded_node:{self.value_func.board}",file=sys.stderr)
+            # Rollout: Simulate a random game from the expanded node.
+            depth=self.rollout_depth
+            #color=='W' if color=='B' else 'B'
+            value = self.alpha_beta(
+                depth=depth,
+                alpha=float('-inf'),
+                beta=float('inf'),
+            )
+
+            #print(f"move_str:{expanded_node.parent.move_str[-1]}rollout value:{value}",file=sys.stderr)
+            # Backpropagation: Update the tree with the rollout reward.
+            self.backpropagate(expanded_node, value)
+            while self.undo_positions:
+                pos=self.undo_positions.pop()
+                self.value_func.undo(pos)
+            # --- Simulation (using Alpha-Beta) ---
+
+    def best_action_distribution(self, root):
+        '''
+        Computes the visit count distribution for each action at the root node.
+        '''
+        total_rewards = sum(abs(child.total_reward) for child in root.children)
+        distribution = np.zeros(len(root.children))
+        best_visits = -10000
+        best_action = None
+        for action, child in enumerate(root.children):
+            distribution[action] = child.total_reward / total_rewards if total_rewards > 0 else 0
+            if child.total_reward > best_visits:
+                best_visits = child.total_reward
+                best_action = root.move_str[action]
+        return best_action, distribution
+    
+
 
 
 
