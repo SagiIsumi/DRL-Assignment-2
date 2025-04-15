@@ -250,7 +250,7 @@ with open('stage_1.pkl', 'rb') as f:
     else:
         print("No File!!")
 
-td_mcts = TD_MCTS(env, approximator_1, iterations=70, exploration_constant=1.41, rollout_depth=20, gamma=1.0)
+td_mcts = TD_MCTS(env, approximator_1, iterations=300, exploration_constant=1.41, rollout_depth=20, gamma=1.0)
 
 def get_action(state, score):
     env.board=state
@@ -258,9 +258,9 @@ def get_action(state, score):
     #return random.choice([0, 1, 2, 3]) # Choose a random action
     # You can submit this random agent to evaluate the performance of a purely random strategy.
     root = TD_MCTS_Node(state, env.score,env)
-    if score > 25000:
-        td_mcts.c=2.56
-        td_mcts.iterations=150
+    # if score > 25000:
+    #     td_mcts.c=2.56
+    #     td_mcts.iterations=150
     # Run multiple simulations to build the MCTS tree
     for _ in range(td_mcts.iterations):
         td_mcts.run_simulation(root)
