@@ -75,8 +75,8 @@ class TD_MCTS:
         #   print(f"ucb1:{ucb1_scores},complmentary:{complmentary}")
         #   print(f"child_reward:{child_reward}, child_visits:{child_visits}")
           try:
-            if len(node.children[np.argmax(ucb1_scores)].children)>=20:
-              index=np.random.choice(range(20), 1)[0]
+            if len(node.children[np.argmax(ucb1_scores)].children)>=15:
+              index=np.random.choice(range(15), 1)[0]
               return self.select_child(node.children[np.argmax(ucb1_scores)].children[index],sim_env)
             state,reward,_,_=sim_env.step(np.argmax(ucb1_scores))
             afterstate_node=node.children[np.argmax(ucb1_scores)]
@@ -102,10 +102,10 @@ class TD_MCTS:
         # TODO: Perform a random rollout from the current state up to the specified depth.
         rand_num=np.random.rand()
         if sim_env.is_game_over():
-          return sim_env.score
-        if rand_num<0.98 or depth==0:
+          return 0
+        if rand_num<1.0 or depth==0 or sim_env.is_game_over():
           #print(self.approximator.value(sim_env.board))
-          return sim_env.score+self.approximator.value(sim_env.afterstate_board)
+          return self.approximator.value(sim_env.afterstate_board)
         
         action = random.choice([a for a in range(4) if sim_env.is_move_legal(a)])
         state, reward, done, _ =sim_env.step(action)
@@ -121,7 +121,7 @@ class TD_MCTS:
         if node.total_reward<self.min:  
             self.min=node.total_reward
         if node.parent:
-          self.backpropagate(node.parent,self.gamma*reward)
+          self.backpropagate(node.parent,node.score-node.parent.score+self.gamma*reward)
     def run_simulation(self, root):
         node = root
         sim_env = self.create_env_from_state(node.state, node.score)
